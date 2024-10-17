@@ -1,55 +1,43 @@
-import path from "path";
-import express from "express";
-import dotenv from "dotenv";
-import connectDB from "./config/db.js";
-import morgan from "morgan";
-import userRoutes from "./routes/userRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js";
-import productRoutes from "./routes/productRoutes.js";
+const express = require('express');
+const app = express();
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const authRoute = require("./routes/auth");
+const userRoute = require("./routes/user");
+const productRoute = require("./routes/product");
+const cartRoute = require("./routes/cart");
+const orderRoute = require("./routes/order");
+const stripeRoute = require("./routes/stripe");
 
-import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
-
+// Read value from .env file
 dotenv.config();
 
-connectDB();
+//MongoDB Connection
+mongoose.connect(process.env.DB_URL_DEVELOPMENT)
+.then(()=>{
+	console.log("DB Connection Successfully")
+}).catch((err)=>{
+	console.log(err)
+})
 
-const app = express();
-
-if (process.env.NODE_ENV === "developement") {
-    app.use(morgan("dev"));
-}
-
+//Allow to call from different source
+app.use(cors());
+// parse requests of content-type - application/json, Read JSON data from request
 app.use(express.json());
 
-app.use("/api/products", productRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/orders", orderRoutes);
-app.get("/api/config/paypal", (req, res) =>
-    res.send(process.env.PAYPAL_CLIENT_ID)
-);
+//Use routes
+app.use("/api/auth",authRoute);
+app.use("/api/users",userRoute);
+app.use("/api/products",productRoute);
+app.use("/api/carts",cartRoute);
+app.use("/api/orders",orderRoute);
+app.use("/api/checkout",stripeRoute);
 
-const __dirname = path.resolve();
 
-if (process.env.NODE_ENV === "production") {
-    app.use(express.static(path.join(__dirname, "/frontend/build")));
-    app.get("*", (req, res) =>
-        res.sendFile(path.resolve(__dirname, "frontend", "build", "index.html"))
-    );
-} else {
-    app.get("/", (req, res) => {
-        res.send("API is Runn....");
-    });
-}
+//Read PORT from .env file OR Default set 5002
+const API_PORT = process.env.API_PORT || 5002;
 
-app.use(notFound);
-app.use(errorHandler);
-
-const PORT = process.env.PORT || 5000;
-app.listen(
-    PORT,
-    console.log(
-        `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold
-    )
-);
-
-//runingin
+app.listen(API_PORT,()=>{
+	console.log(`Backend Server is running on port ${API_PORT}`)
+})
